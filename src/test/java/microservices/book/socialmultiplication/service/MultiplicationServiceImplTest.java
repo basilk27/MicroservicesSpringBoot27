@@ -5,11 +5,13 @@ import microservices.book.socialmultiplication.domain.MultiplicationResultAttemp
 import microservices.book.socialmultiplication.domain.User;
 import microservices.book.socialmultiplication.repository.MultiplicationResultAttemptRepository;
 import microservices.book.socialmultiplication.repository.UserRepository;
+import org.assertj.core.util.Lists;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -89,5 +91,24 @@ public class MultiplicationServiceImplTest {
         assertThat( attemptResult ).isFalse();
 
         verify( multiplicationResultAttemptRepository ).save( resultAttempt );
+    }
+
+    @Test
+    public void findTop5ByUserAliasOrderByIdDescTest() {
+        //given
+        Multiplication multiplication = new Multiplication( 50, 60 );
+        User user = new User( "john_doe" );
+        MultiplicationResultAttempt resultAttempt1 = new MultiplicationResultAttempt( user, multiplication, 3010, false );
+        MultiplicationResultAttempt resultAttempt2 = new MultiplicationResultAttempt( user, multiplication, 3051, false );
+        List<MultiplicationResultAttempt> resultAttemptList = Lists.newArrayList(resultAttempt1, resultAttempt2);
+
+        given( userRepository.findByAlias( "john_doe" )).willReturn( Optional.empty() );
+        given( multiplicationResultAttemptRepository.findTop5ByUserAliasOrderByIdDesc( "john_doe" ) ).willReturn( resultAttemptList );
+
+        // when
+        List<MultiplicationResultAttempt> resultAttemptList2 = multiplicationService.findTop5ByUserAliasOrderByIdDesc( "john_doe" );
+
+        // then
+        assertThat( resultAttemptList2 ).isEqualTo( resultAttemptList );
     }
 }
