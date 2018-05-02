@@ -4,6 +4,7 @@ import microservices.book.socialmultiplication.domain.Multiplication;
 import microservices.book.socialmultiplication.domain.MultiplicationResultAttempt;
 import microservices.book.socialmultiplication.domain.User;
 import microservices.book.socialmultiplication.event.EventDispatcher;
+import microservices.book.socialmultiplication.event.MultiplicationSolvedEvent;
 import microservices.book.socialmultiplication.repository.MultiplicationResultAttemptRepository;
 import microservices.book.socialmultiplication.repository.UserRepository;
 import org.assertj.core.util.Lists;
@@ -20,6 +21,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
@@ -70,9 +72,14 @@ public class MultiplicationServiceImplTest {
         //given
         Multiplication multiplication = new Multiplication( 50, 60 );
         User user = new User( "john_doe" );
-        MultiplicationResultAttempt resultAttempt = new MultiplicationResultAttempt( user, multiplication, 3000, false );
+        MultiplicationResultAttempt resultAttempt = new MultiplicationResultAttempt( user, multiplication,
+                3000, false );
 
-        MultiplicationResultAttempt verrifiedAttempt = new MultiplicationResultAttempt( user, multiplication, 3000, true );
+        MultiplicationResultAttempt verrifiedAttempt = new MultiplicationResultAttempt( user, multiplication,
+                3000, true );
+
+        MultiplicationSolvedEvent event = new MultiplicationSolvedEvent(resultAttempt.getId(),
+                resultAttempt.getUser().getId(), true);
 
         given( userRepository.findByAlias( "john_doe" ) ).willReturn( Optional.empty() );
 
@@ -82,6 +89,7 @@ public class MultiplicationServiceImplTest {
         //assert
         assertThat( attemptResult ).isTrue();
         verify( multiplicationResultAttemptRepository ).save( verrifiedAttempt );
+        verify( eventDispatcher ).send( eq( event ) );
 
     }
 

@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
+import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,6 +33,7 @@ public class MultiplicationServiceImpl implements MultiplicationService {
         this.userRepository = userRepository;
         this.eventDispatcher = eventDispatcher;
     }
+
     @Override
     public Multiplication createRandomMultiplication() {
         int factorA = randomGeneratorService.generateRandomFactor();
@@ -41,6 +43,7 @@ public class MultiplicationServiceImpl implements MultiplicationService {
     }
 
     @Override
+    @Transactional
     public boolean checkAttempt( MultiplicationResultAttempt resultAttempt ) {
         Assert.isTrue( !resultAttempt.isCorrect(), "You can't send attempt marked as correct!!" );
 
@@ -67,7 +70,17 @@ public class MultiplicationServiceImpl implements MultiplicationService {
     }
 
     @Override
+    public List< MultiplicationResultAttempt > getStatsForUser( String userAlias ) {
+        return multiplicationResultAttemptRepository.findTop5ByUserAliasOrderByIdDesc( userAlias );
+    }
+
+    @Override
     public List< MultiplicationResultAttempt > findTop5ByUserAliasOrderByIdDesc( String userAlias ) {
         return multiplicationResultAttemptRepository.findTop5ByUserAliasOrderByIdDesc( userAlias );
+    }
+
+    @Override
+    public MultiplicationResultAttempt getResultById(final Long resultId) {
+        return multiplicationResultAttemptRepository.findOne(resultId);
     }
 }

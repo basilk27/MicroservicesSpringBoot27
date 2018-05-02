@@ -22,6 +22,7 @@ import java.io.Serializable;
 @Entity
 @Table(name = "MULTIPLICATION_RESULT_ATTEMPT")
 public final class MultiplicationResultAttempt  implements Serializable {
+
     @Id
     @GeneratedValue
     private Long id;
