@@ -3,20 +3,29 @@ package microservices.book.socialmultiplication.service;
 import microservices.book.socialmultiplication.domain.Multiplication;
 import microservices.book.socialmultiplication.domain.MultiplicationResultAttempt;
 import microservices.book.socialmultiplication.domain.User;
+import microservices.book.socialmultiplication.event.EventDispatcher;
+import microservices.book.socialmultiplication.event.MultiplicationSolvedEvent;
 import microservices.book.socialmultiplication.repository.MultiplicationResultAttemptRepository;
 import microservices.book.socialmultiplication.repository.UserRepository;
+import org.assertj.core.util.Lists;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.junit4.SpringRunner;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
+@RunWith(SpringRunner.class)
 public class MultiplicationServiceImplTest {
 
     private MultiplicationServiceImpl multiplicationService;
@@ -30,6 +39,10 @@ public class MultiplicationServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private EventDispatcher eventDispatcher;
+
+
     @Before
     public void setUp() {
         //with this call to initMocks we tell Mockito to process the annotations
@@ -37,7 +50,8 @@ public class MultiplicationServiceImplTest {
 
         multiplicationService = new MultiplicationServiceImpl( randomGeneratorService,
                                                                multiplicationResultAttemptRepository,
-                                                               userRepository );
+                                                               userRepository,
+                                                               eventDispatcher );
     }
 
     @Test
@@ -58,9 +72,14 @@ public class MultiplicationServiceImplTest {
         //given
         Multiplication multiplication = new Multiplication( 50, 60 );
         User user = new User( "john_doe" );
-        MultiplicationResultAttempt resultAttempt = new MultiplicationResultAttempt( user, multiplication, 3000, false );
+        MultiplicationResultAttempt resultAttempt = new MultiplicationResultAttempt( user, multiplication,
+                3000, false );
 
-        MultiplicationResultAttempt verrifiedAttempt = new MultiplicationResultAttempt( user, multiplication, 3000, true );
+        MultiplicationResultAttempt verrifiedAttempt = new MultiplicationResultAttempt( user, multiplication,
+                3000, true );
+
+        MultiplicationSolvedEvent event = new MultiplicationSolvedEvent(resultAttempt.getId(),
+                resultAttempt.getUser().getId(), true);
 
         given( userRepository.findByAlias( "john_doe" ) ).willReturn( Optional.empty() );
 
@@ -70,6 +89,7 @@ public class MultiplicationServiceImplTest {
         //assert
         assertThat( attemptResult ).isTrue();
         verify( multiplicationResultAttemptRepository ).save( verrifiedAttempt );
+        verify( eventDispatcher ).send( eq( event ) );
 
     }
 
@@ -89,5 +109,24 @@ public class MultiplicationServiceImplTest {
         assertThat( attemptResult ).isFalse();
 
         verify( multiplicationResultAttemptRepository ).save( resultAttempt );
+    }
+
+    @Test
+    public void findTop5ByUserAliasOrderByIdDescTest() {
+        //given
+        Multiplication multiplication = new Multiplication( 50, 60 );
+        User user = new User( "john_doe" );
+        MultiplicationResultAttempt resultAttempt1 = new MultiplicationResultAttempt( user, multiplication, 3010, false );
+        MultiplicationResultAttempt resultAttempt2 = new MultiplicationResultAttempt( user, multiplication, 3051, false );
+        List<MultiplicationResultAttempt> resultAttemptList = Lists.newArrayList(resultAttempt1, resultAttempt2);
+
+        given( userRepository.findByAlias( "john_doe" )).willReturn( Optional.empty() );
+        given( multiplicationResultAttemptRepository.findTop5ByUserAliasOrderByIdDesc( "john_doe" ) ).willReturn( resultAttemptList );
+
+        // when
+        List<MultiplicationResultAttempt> resultAttemptList2 = multiplicationService.findTop5ByUserAliasOrderByIdDesc( "john_doe" );
+
+        // then
+        assertThat( resultAttemptList2 ).isEqualTo( resultAttemptList );
     }
 }
